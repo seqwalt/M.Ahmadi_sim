@@ -89,6 +89,10 @@ end
 
 % Find W (Positive definite function)
 
+% Controller
+
+u = g'*dBdx*W/(dBdx'*g*g'*dBdx);
+
 %% --- Remove Negative Altitude Data --- %%
 for si1_ind = 1:len_si
     for si2_ind = 1:len_si
