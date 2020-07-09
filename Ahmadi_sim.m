@@ -10,17 +10,23 @@ T = 0.2*T_max;      % Thrust
 T_no_u = 0;         % Thrust with no input
 A = -.9;            % Angle of attack (use -0.9 for engine failure)
 L = 1;              % Lift starts at 100%
-%si = [-0.07, 0, 0.07];      % side information +/- 10
+u1a = 0.3*T;        % 1 corresponds to thrust
+u2a = 0.8*A;        % 2 corresponds to ang of attack
+u1b = T;            % b corresponds to final trajectory in the 3-traj approx
+u2b = A;
+%si = [-0.07, 0, 0.07];    % side information
 si = 0;
 len_si = length(si);
-y0 = [95 2.2 120];  % initial values of velocity (m/s), flight path angle (deg), altitude (m)
-failure = 'engine'; % System failure type: options are 'wing' or 'engine'
+y0 = [95 2.2 120];    % initial values of velocity (m/s), flight path angle (deg), altitude (m)
+failure = 'engine';   % System failure type: options are 'wing' or 'engine'
 
 step = 0.05;          % Time step size (s) for solving ODE
 tspan = 0:step:200;   % Time span to solve over
 t_f = 0.5;            % Time of system failure (s) (should be a multiple of step) use 0.5 for engine failure
 dur = 14.5;           % Duration of data measurement after failure (s) (multiple of step) use 14.5 for engine failure
 ex_dur = 100;         % Extrapolation time after data stops
+k = 3;                % Spline order
+ex_k = 3;             % Order of extrapolation
 
 %% --- Aircraft Flight and Failure --- %%
 
@@ -35,49 +41,44 @@ if strcmp(failure,'wing') == 1
     L = 0;
 elseif strcmp(failure,'engine') == 1
     % Engine failure: 20% T_max -> 80% T_max (interpreted as 60% max thrust when no input is given)
-    T = 0.8*T_max;
     T_no_u = 0.6*T_max;
 end
 [t,y] = ode45(@(t,y) true_sys(y,T_no_u,0,L), tspan(find(tspan==t_f):find(tspan==t_f+dur)), y_end);
 S_no_u = [t,y];
-[t,y] = ode45(@(t,y) true_sys(y,T,0,L), tspan(find(tspan==t_f):find(tspan==t_f+dur)), y_end); 
-S_u1 = [t,y];  % u1 corresponds to thrust. (Ang of attack is 0)
-[t,y] = ode45(@(t,y) true_sys(y,T_no_u,A,L), tspan(find(tspan==t_f):find(tspan==t_f+dur)), y_end); 
-S_u2 = [t,y];  % u2 corresponds to ang of attack. (Thrust input is 0)
+[t,y] = ode45(@(t,y) true_sys(y,u1a + T_no_u,u2a,L), tspan(find(tspan==t_f):find(tspan==t_f+dur)), y_end); 
+S_a = [t,y];
 
 % --- True flight system --- %
-[t,y] = ode45(@(t,y) true_sys(y,T,A,L), tspan(find(tspan==t_f):find(tspan==t_f+dur)), y_end);
+[t,y] = ode45(@(t,y) true_sys(y,u1b + T_no_u,u2b,L), tspan(find(tspan==t_f):find(tspan==t_f+dur)), y_end);
 S_true_pre = [t,y];
 S_true = [S;t,y];
 y_end_data = y(end,:);
     % The rest of the flight if there were no controller
-[t,y] = ode45(@(t,y) true_sys(y,T,A,L), tspan(find(tspan==t_f+dur):end), y_end_data);
+[t,y] = ode45(@(t,y) true_sys(y,u1b + T_no_u,u2b,L), tspan(find(tspan==t_f+dur):end), y_end_data);
 S_true = [S_true;t,y];
 
 times = S_no_u(:,1);  % all times are the same for S_no_u, S_u1 and S_u2
+ex_times = times(1):step:times(end) + ex_dur; % Time span plus extrap time 
 
 %% --- Approximate System Model --- %%
 
-u1 = T; u2 = A;
+% Coefficients for Velocity
+[V_C_coefs,V_u_coefs] = spline_coefs('v',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'v' for velocity
 
-% Approximation for Velocity
-[V1_no_u,V2_no_u,V1_u1,V2_u2] = control_affine_spline('v',times,ex_dur,step,S_true_pre,S_u1,S_u2,S_no_u,u1,u2); % 'v' for velocity
+% Coefficients for Flight Path Angle
+[P_C_coefs,P_u_coefs] = spline_coefs('f',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'f' for FPA
 
-% Approximation for Flight Path Angle
-[P1_no_u,P2_no_u,P1_u1,P2_u2] = control_affine_spline('f',times,ex_dur,step,S_true_pre,S_u1,S_u2,S_no_u,u1,u2); % 'f' for FPA
+% Coefficients for Altitude
+[A_C_coefs,A_u_coefs] = spline_coefs('a',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'a' for altitude
 
-% Approximation for Altitude
-[A1_no_u,A2_no_u,A1_u1,A2_u2] = control_affine_spline('a',times,ex_dur,step,S_true_pre,S_u1,S_u2,S_no_u,u1,u2); % 'a' for altitude
-
-% Combine Splines
-system = [V1_no_u,V2_no_u,V1_u1,V2_u2; P1_no_u,P2_no_u,P1_u1,P2_u2; A1_no_u,A2_no_u,A1_u1,A2_u2];
+system_coefs = {V_C_coefs,V_u_coefs; P_C_coefs,P_u_coefs; A_C_coefs,A_u_coefs};
 
 % SYSTEM MODEL
 eval_times = (times(end)+step:step:times(end)+step+ex_dur)';
 S_approx = cell(len_si,len_si);
 for si1_ind = 1:len_si
     for si2_ind = 1:len_si
-        [t,x] = ode45(@(t,x) approx_sys(t,system,u1,u2,si(si1_ind),si(si2_ind)), eval_times, y_end_data); 
+        [t,x] = ode45(@(t,x) approx_sys(t,ex_times,k,system_coefs,u1b,u2b,si(si1_ind),si(si2_ind)), eval_times, y_end_data); 
         S_approx(si1_ind,si2_ind) = {[t,x]};
     end
 end
