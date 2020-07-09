@@ -13,23 +13,23 @@ elseif strcmpi(output_type(1),'a') == 1
 end
 
 %% --- Extrapolate for coefficients when u_{j} = 0 (C)--- %%
-exS_no_u = fnxtr(spapi(order,times,S_no_u(:,column)),ex_order);    % exS_no_u is in ppform
+exS_no_u = fnxtr(spapi(order,times,S_no_u(:,column)),ex_order); % exS_no_u is in ppform
 exS_no_u_vals = fnval(exS_no_u,ex_times);
-exS_no_u = spapi(order,ex_times,exS_no_u_vals);                    % now its in B-form (what we want)
+exS_no_u = spapi(order,ex_times,exS_no_u_vals);                 % now its in B-form (what we want)
 
 C = exS_no_u.coefs;
 
 %% --- Extrapolate for 2nd trajectory coefficients (A) --- %%
-exS_a = fnxtr(spapi(order,times,S_a(:,column)),ex_order);    % exS_a is in ppform
+exS_a = fnxtr(spapi(order,times,S_a(:,column)),ex_order); % exS_a is in ppform
 exS_a_vals = fnval(exS_a,ex_times);
-exS_a = spapi(order,ex_times,exS_a_vals);                    % now in B-form
+exS_a = spapi(order,ex_times,exS_a_vals);                 % now in B-form
 
 A = exS_a.coefs;
 
 %% --- Extrapolate for 3rd trajectory coefficients (B) --- %%
-exS_b = fnxtr(spapi(order,times,S_b(:,column)),ex_order);    % exS_b is in ppform
+exS_b = fnxtr(spapi(order,times,S_b(:,column)),ex_order); % exS_b is in ppform
 exS_b_vals = fnval(exS_b,ex_times);
-exS_b = spapi(order,ex_times,exS_b_vals);                    % now in B-form
+exS_b = spapi(order,ex_times,exS_b_vals);                 % now in B-form
 
 B = exS_b.coefs;
 
