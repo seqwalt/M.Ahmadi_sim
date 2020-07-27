@@ -1,7 +1,6 @@
 % Ahmadi_sim.m replicates the results presented in a paper by
 % M. Ahmadi et al. titled "Safe Controller Synthesis for
 % Data-Driven Differential Inclusions"
-
 % Updated 7/08/20 by Sequoyah Walters
 
 %% --- Parameter Panel --- %%
@@ -82,10 +81,43 @@ for si1_ind = 1:len_si
         S_approx(si1_ind,si2_ind) = {[t,x]};
     end
 end
-
 %% --- Controller Synthesis and Usage --- %%
 
 % Find B (Lyapunov Function)
+
+m = 60000;  % mass is 60,000 kg
+g = 9.8;    % accel due to grav is 9.8 ms^(-2)
+
+echo on;
+syms v p a t; % vel, fpa, alt, time
+vars = [v; p; a];
+% Constructing the vector field dx/dt = f
+f = [(1/m)*(T*cosd(A) - (2.7 + 3.08*(1.25 + 4.2*A)^2)*v^2 - m*g*p);
+     (1/(m*v))*(T*sind(A) + L*68.6*(1.25 + 4.2*A)*v^2 - m*g*(1-(p^2)/2));
+     v*p];
+% =============================================
+% First, initialize the sum of squares program
+prog = sosprogram(vars);
+% =============================================
+% The Lyapunov function V(x):
+[prog,B] = sospolyvar(prog,[v^3; p^3; a^3; t^3],'wscoeff');
+[prog,W] = sospolyvar(prog,[v^3; p^3; a^3; t^3],'wscoeff');
+% =============================================
+% Next, define SOSP constraints
+% Constraint 1
+prog = sosineq(prog,B-(v^2+p^2+a^2));
+% Constraint 2
+expr = -(diff(B,t) + diff(B,v)*(f(1)-M) + diff(B,p)*(f(2)-M) + diff(B,a)*(f(3)-M) + W)*v;
+prog = sosineq(prog,expr);
+
+% =============================================
+% And call solver
+solver_opt.solver = 'sedumi';
+prog = sossolve(prog,solver_opt);
+% =============================================
+% Finally, get solution
+SOLV = sosgetsol(prog,B)
+echo off;
 
 % Find W (Positive definite function)
 
