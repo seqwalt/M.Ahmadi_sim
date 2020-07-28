@@ -155,7 +155,7 @@ solver_opt.solver = 'sedumi';
 prog = sossolve(prog,solver_opt);
 % =============================================
 % Finally, get solution
-SOLV = sosgetsol(prog,B)
+SOLV = sosgetsol(prog,B);
 echo off;
 
 % Find W (Positive definite function)
