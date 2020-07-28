@@ -1,7 +1,7 @@
 function dydt = true_sys(y,T,A,L)
     
     % y = [y(1) y(2) y(3)] = [(Velocity) (flight path ang) (altitude)]
-    % T -> thrust   A -> angle of attack (rad)
+    % T -> thrust   A -> angle of attack (deg)
     m = 60000;  % mass is 60,000 kg
     g = 9.8;    % accel due to grav is 9.8 ms^(-2)
     
