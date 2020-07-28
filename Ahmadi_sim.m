@@ -142,13 +142,15 @@ q1(v,p,a,t) = v^2 + p^2 + a^2 +t^2;
 expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s*(v_safe-v) - c;
 expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*(f(2)-M) + diff(B(v,p,a,t),a)*(f(3)-M) + W(v,p,a,t) + m1*(t-t_N)*(t-T))*v;
 expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2*(t-t_N)*(t-T))*v;
-expr4 = -q1(v,p,a,t)*mtimes([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)],g) - q2;
+expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2;
+expr4_1 = expr4(1);
+expr4_2 = expr4(2);
 
-[prog,exprr4] = sospolymatrixvar(prog,expr4,[1,2]);
 prog = sosineq(prog,expr1);
 prog = sosineq(prog,expr2);
 prog = sosineq(prog,expr3);
-prog = sosineq(prog,expr4);
+prog = sosineq(prog,expr4_1);
+prog = sosineq(prog,expr4_2);
 % =============================================
 % And call solver
 solver_opt.solver = 'sedumi';
