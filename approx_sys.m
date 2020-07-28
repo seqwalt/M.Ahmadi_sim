@@ -41,6 +41,9 @@ f_A = fnval(fnder(AC),t);
 g_A1 = fnval(fnder(Au1),t);
 g_A2 = fnval(fnder(Au2),t);
 
+% Store g for later use
+g = [g_V1,g_V2; g_P1,g_P2; g_P1,g_P2];
+
 % Put the model together
 dxdt = zeros(3,1);
 dxdt(1) = f_V + [g_V1,g_V2]*[T;A] + si1;
