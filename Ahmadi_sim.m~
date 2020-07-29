@@ -142,9 +142,10 @@ q1(v,p,a,t) = v^2 + p^2 + a^2 +t^2;
 expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s*(v_safe-v) - c;
 expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*(f(2)-M) + diff(B(v,p,a,t),a)*(f(3)-M) + W(v,p,a,t) + m1*(t-t_N)*(t-T))*v;
 expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2*(t-t_N)*(t-T))*v;
-expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2;
-expr4_1 = expr4(1);
-expr4_2 = expr4(2)*v;
+expr4_1 = -q1(v,p,a,t)*(diff(B(v,p,a,t),v)/m) - q2;
+expr4_2 = -q1(v,p,a,t)*(diff(B(v,p,a,t),v)*(-32.34*v^2/m) + diff(B(v,p,a,t),p)*((pi*Th/(180*m*v)) + (288.12*v/m))) - q2;
+% expr4_1 = expr4(1);
+% expr4_2 = expr4(2);
 
 prog = sosineq(prog,expr1);
 prog = sosineq(prog,expr2);
