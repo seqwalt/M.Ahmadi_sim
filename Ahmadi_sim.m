@@ -144,7 +144,7 @@ expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*
 expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2*(t-t_N)*(t-T))*v;
 expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2;
 expr4_1 = expr4(1);
-expr4_2 = expr4(2)*v;
+expr4_2 = expr4(2)*v; 
 
 prog = sosineq(prog,expr1);
 prog = sosineq(prog,expr2);
