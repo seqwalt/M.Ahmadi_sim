@@ -20,9 +20,11 @@ y0 = [95 2.2 120];    % initial values of velocity (m/s), flight path angle (deg
 failure = 'engine';   % System failure type: options are 'wing' or 'engine'
 
 step = 0.05;          % Time step size (s) for solving ODE
-tspan = 0:step:200;   % Time span to solve over
+end_time = 200;
+tspan = 0:step:end_time;   % Time span to solve over
 t_f = 0.5;            % Time of system failure (s) (should be a multiple of step) use 0.5 for engine failure
 dur = 14.5;           % Duration of data measurement after failure (s) (multiple of step) use 14.5 for engine failure
+wait = 1; % wait 1 sec after approx is started to engage controller
 ex_dur = 100;         % Extrapolation time after data stops
 k = 3;                % Spline order
 ex_k = 3;             % Order of extrapolation
@@ -52,9 +54,14 @@ S_a = [t,y];
 S_true_pre = [t,y];
 S_true = [S;t,y];
 y_end_data = y(end,:);
-    % The rest of the flight if there were no controller
+% The rest of the flight if there were no controller
 [t,y] = ode45(@(t,y) true_sys(y,u1b + Th_no_u,u2b,L), tspan(find(tspan==t_f+dur):end), y_end_data);
-S_true = [S_true;t,y];
+S_true_no = [S_true;t,y];
+% Flight until controller
+T   = t_f + dur + wait;    % time to start controller
+[t,y] = ode45(@(t,y) true_sys(y,u1b + Th_no_u,u2b,L), tspan(find(tspan==t_f+dur):find(tspan==T)), y_end_data);
+S_true_c = [S_true;t,y];
+y_control = y(end,:);
 
 times = S_no_u(:,1);  % all times are the same for S_no_u, S_u1 and S_u2
 ex_times = times(1):step:times(end) + ex_dur; % Time span plus extrap time 
@@ -82,14 +89,6 @@ for si1_ind = 1:len_si
     end
 end
 
-%% --- Remove Negative Altitude Data --- %%
-for si1_ind = 1:len_si
-    for si2_ind = 1:len_si
-        S_approx{si1_ind,si2_ind} = above_zero_alt(S_approx{si1_ind,si2_ind},'approximate');
-    end
-end
-S_true   = above_zero_alt(S_true,  '       true');
-
 %% --- Controller Synthesis and Usage --- %%
 
 % Find B (Lyapunov Function)
@@ -98,17 +97,17 @@ m = 60000;  % mass is 60,000 kg
 grav = 9.8;    % accel due to grav is 9.8 ms^(-2)
 v_safe = 86;
 M = 10;
-wait = 1; % wait 1 sec after approx is started to engage controller
+PI = 3.14159;
 
 t_N   = t_f;                   % time t_N
 v_t_N = S_true(S_true==t_N,2); % velocity @ time t_N
 p_t_N = S_true(S_true==t_N,3); % flight path angle @ time t_N
 a_t_N = S_true(S_true==t_N,4); % altitude @ time t_N
 
-T   = t_f + dur + wait;    % time T
-v_T = S_true(S_true==T,2); % velocity @ time T
-p_T = S_true(S_true==T,3); % flight path angle @ time T
-a_T = S_true(S_true==T,4); % altitude @ time T
+% T defined above as t_f + t_dur + wait ... time to start controller
+v_T = S_true_c(S_true_c==T,2); % velocity @ time T
+p_T = S_true_c(S_true_c==T,3); % flight path angle @ time T
+a_T = S_true_c(S_true_c==T,4); % altitude @ time T
 
 echo on;
 syms v p a t % vel, fpa, alt, time
@@ -118,12 +117,12 @@ m1 = 1; m2 = 1; s = 1; c = 1; q2 = 0;
 vars = [v; p; a; t];
 % Constructing the vector field dx/dt = f + g*u
 
-f = [(-7.5125*v^2/m) - (m*grav*p*pi/180);
+f = [(-7.5125*v^2/m) - (m*grav*p*PI/180);
      (85.75*v/m) - (grav/v);
-     (v*p*pi/180)];
+     (v*p*PI/180)];
  
 g = [1/m , -32.34*v^2/m;
-     0   , (pi*Th/(180*m*v)) + (288.12*v/m);
+     0   , (PI*Th/(180*m*v)) + (288.12*v/m);
      0   , 0];
  
 % =============================================
@@ -162,23 +161,44 @@ solver_opt.solver = 'sedumi';
 prog = sossolve(prog,solver_opt);
 % =============================================
 % Finally, get solution
-SOL_B = sosgetsol(prog,B)
+SOL_B = sosgetsol(prog,B);
 echo off;
 
-% Controller
-
+% Synthesize Controller
 dBdx(v,p,a,t) = [diff(SOL_B,v); diff(SOL_B,p); diff(SOL_B,a)];
 dBdx = dBdx(v,p,a,t);
 u = (g.'*dBdx*W)/(dBdx.'*(g*g.')*dBdx);
 
+% Use Controller
+for TT = T:2*step:end_time/2
+    V = y_control(1);
+    P = y_control(2);
+    A = y_control(3);
+    U = u(V,P,A,T);
+    [t,y] = ode45(@(t,y) true_sys(y,U(1) + Th_no_u,U(2),L), tspan(find(tspan==TT):1:find(tspan==TT+2*step)), y_control);
+    t = [t(1);t(2)]; % remove TT+2*step data
+    y = [y(1,:);y(2,:)];
+    disp(y);
+    S_true_c = [S_true_c;t,y];
+    y_control = y(end,:);
+end
 
+%% --- Remove Negative Altitude Data --- %%
+for si1_ind = 1:len_si
+    for si2_ind = 1:len_si
+        S_approx{si1_ind,si2_ind} = above_zero_alt(S_approx{si1_ind,si2_ind},'approximate');
+    end
+end
+S_true_no   = above_zero_alt(S_true_no,  '       true_no');
+S_true_c   = above_zero_alt(S_true_c,  '       true_c');
 
 %% --- Plot --- %%
 figure
 hold on
 axis tight
 fill([86,86,100,100],[-10,3.3,3.3,-10],[1 0.8 0.8])  % Make the unsafe region pink
-plot3(S_true(:,2),S_true(:,3),S_true(:,4),'k')
+%plot3(S_true_no(:,2),S_true_no(:,3),S_true_no(:,4),'k')
+plot3(S_true_c(:,2),S_true_c(:,3),S_true_c(:,4),'b')
 
 for si1_ind = 1:len_si
     for si2_ind = 1:len_si
