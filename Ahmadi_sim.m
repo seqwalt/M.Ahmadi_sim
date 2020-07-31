@@ -111,8 +111,11 @@ p_T = S_true(S_true==T,3); % flight path angle @ time T
 a_T = S_true(S_true==T,4); % altitude @ time T
 
 echo on;
-syms v p a t m1 m2 s c q2; % vel, fpa, alt, time, constant
-vars = [v; p; a; t; m1; m2; s; c; q2];
+syms v p a t % vel, fpa, alt, time
+%syms m1 m2 s c q2;
+m1 = 1; m2 = 1; s = 1; c = 1; q2 = 0;
+%vars = [v; p; a; t; m1; m2; s; c; q2];
+vars = [v; p; a; t];
 % Constructing the vector field dx/dt = f + g*u
 
 f = [(-7.5125*v^2/m) - (m*grav*p*pi/180);
@@ -127,16 +130,18 @@ g = [1/m , -32.34*v^2/m;
 % First, initialize the sum of squares program
 prog = sosprogram(vars);
 % =============================================
-% The Lyapunov function V(x):
-[prog,B(v,p,a,t)]  = sospolyvar(prog,[v^3; p^3; a^3; t^3],'wscoeff');
-[prog,W(v,p,a,t)]  = sospolyvar(prog,[v^3; p^3; a^3; t^3],'wscoeff');
+% The Lyapunov-like function B(x,t) and the positive-def function W(x,t):
+[prog,B(v,p,a,t)]  = sospolyvar(prog,[v^2; p^2; a^2; t^2; v; p; a; t],'wscoeff');
+%[prog,W(v,p,a,t)]  = sospolyvar(prog,[v^3; p^3; a^3; t^3],'wscoeff');
 % =============================================
 % Next, define SOSP constraints
-prog = sosineq(prog,W(v,p,a,t));
-prog = sosineq(prog,s);
-prog = sosineq(prog,m1);
-prog = sosineq(prog,m2);
-prog = sosineq(prog,q2);
+% prog = sosineq(prog,W(v,p,a,t));
+% prog = sosineq(prog,s);
+% prog = sosineq(prog,m1);
+% prog = sosineq(prog,m2);
+% prog = sosineq(prog,q2);
+
+W(v,p,a,t) = v^2 + p^2 + a^2 + t^2;
 q1(v,p,a,t) = v^2 + p^2 + a^2 +t^2;
 
 expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s*(v_safe-v) - c;
@@ -157,14 +162,16 @@ solver_opt.solver = 'sedumi';
 prog = sossolve(prog,solver_opt);
 % =============================================
 % Finally, get solution
-SOLV = sosgetsol(prog,B);
+SOL_B = sosgetsol(prog,B)
 echo off;
-
-% Find W (Positive definite function)
 
 % Controller
 
-u = g'*dBdx*W/(dBdx'*(g*g')*dBdx);
+dBdx(v,p,a,t) = [diff(SOL_B,v); diff(SOL_B,p); diff(SOL_B,a)];
+dBdx = dBdx(v,p,a,t);
+u = (g.'*dBdx*W)/(dBdx.'*(g*g.')*dBdx);
+
+
 
 %% --- Plot --- %%
 figure
