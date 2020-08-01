@@ -91,13 +91,11 @@ end
 
 %% --- Controller Synthesis and Usage --- %%
 
-% Find B (Lyapunov Function)
-
 m = 60000;  % mass is 60,000 kg
 grav = 9.8;    % accel due to grav is 9.8 ms^(-2)
 v_safe = 86;
 M = 10;
-PI = 
+PI = 3.14159;
 
 t_N   = t_f;                   % time t_N
 v_t_N = S_true(S_true==t_N,2); % velocity @ time t_N
@@ -109,44 +107,45 @@ v_T = S_true_c(S_true_c==T,2); % velocity @ time T
 p_T = S_true_c(S_true_c==T,3); % flight path angle @ time T
 a_T = S_true_c(S_true_c==T,4); % altitude @ time T
 
-echo on;
-syms v p a t % vel, fpa, alt, time
-%syms m1 m2 s c q2;
-m1 = 1; m2 = 1; s = 1; c = 1; q2 = 0;
-%vars = [v; p; a; t; m1; m2; s; c; q2];
+syms v p a t c % vel, fpa, alt, time, and constant
 vars = [v; p; a; t];
 % Constructing the vector field dx/dt = f + g*u
 
 f = [(-7.5125*v^2/m) - (m*grav*p*PI/180);
      (85.75*v/m) - (grav/v);
      (v*p*PI/180)];
- 
+
 g = [1/m , -32.34*v^2/m;
      0   , (PI*Th/(180*m*v)) + (288.12*v/m);
      0   , 0];
- 
+
 % =============================================
 % First, initialize the sum of squares program
 prog = sosprogram(vars);
 % =============================================
-% The Lyapunov-like function B(x,t) and the positive-def function W(x,t):
-[prog,B(v,p,a,t)]  = sospolyvar(prog,[v^2; p^2; a^2; t^2; v; p; a; t],'wscoeff');
-%[prog,W(v,p,a,t)]  = sospolyvar(prog,[v^3; p^3; a^3; t^3],'wscoeff');
+% Declare variables and functions
+[prog,B(v,p,a,t)]  = sospolyvar(prog,monomials(vars,[0:4]),'wscoeff');
+[prog,W(v,p,a,t)]  = sospolyvar(prog,monomials(vars,[0:4]),'wscoeff');
+[prog,m1(v,p,a,t)] = sospolyvar(prog,monomials(vars,[0:2]),'wscoeff');
+[prog,m2(v,p,a,t)] = sospolyvar(prog,monomials(vars,[0:2]),'wscoeff');
+[prog,s(v,p,a,t)]  = sospolyvar(prog,monomials(vars,[0:2]),'wscoeff');
+[prog,q2(v,p,a,t)] = sospolyvar(prog,monomials(vars,[0:2]),'wscoeff');
+prog = sosdecvar(prog,[c]);
 % =============================================
 % Next, define SOSP constraints
-% prog = sosineq(prog,W(v,p,a,t));
-% prog = sosineq(prog,s);
-% prog = sosineq(prog,m1);
-% prog = sosineq(prog,m2);
-% prog = sosineq(prog,q2);
+prog = sosineq(prog,W(v,p,a,t));
+prog = sosineq(prog,m1(v,p,a,t));
+prog = sosineq(prog,m2(v,p,a,t));
+prog = sosineq(prog,q2(v,p,a,t));
+prog = sosineq(prog,s(v,p,a,t));
+prog = sosineq(prog,c);
 
-W(v,p,a,t) = v^2 + p^2 + a^2 + t^2;
 q1(v,p,a,t) = v^2 + p^2 + a^2 +t^2;
 
-expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s*(v_safe-v) - c;
-expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*(f(2)-M) + diff(B(v,p,a,t),a)*(f(3)-M) + W(v,p,a,t) + m1*(t-t_N)*(t-T))*v;
-expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2*(t-t_N)*(t-T))*v;
-expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2;
+expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v,p,a,t)*(v_safe-v) - c;
+expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*(f(2)-M) + diff(B(v,p,a,t),a)*(f(3)-M) + W(v,p,a,t) + m1(v,p,a,t)*(t-t_N)*(t-T))*v;
+expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2(v,p,a,t)*(t-t_N)*(t-T))*v;
+expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2(v,p,a,t);
 expr4_1 = expr4(1);
 expr4_2 = expr4(2)*v;
 
@@ -155,19 +154,30 @@ prog = sosineq(prog,expr2);
 prog = sosineq(prog,expr3);
 prog = sosineq(prog,expr4_1);
 prog = sosineq(prog,expr4_2);
+
+% Constrain outputs --> 0 <= Th <= 15;  -3 <= fpa <= 15
+dBdx(v,p,a,t) = [diff(B(v,p,a,t),v); diff(B(v,p,a,t),p); diff(B(v,p,a,t),a)];
+u = (g.'*dBdx(v,p,a,t)*W(v,p,a,t))/(dBdx(v,p,a,t).'*(g*g.')*dBdx(v,p,a,t));
+
+prog = sosineq(prog,u(1));
+prog = sosineq(prog,Th_max - u(1));
+prog = sosineq(prog,u(2) + 3);
+prog = sosineq(prog,15 - u(2));
 % =============================================
 % And call solver
 solver_opt.solver = 'sedumi';
+echo on;
 prog = sossolve(prog,solver_opt);
+echo off;
 % =============================================
 % Finally, get solution
 SOL_B = sosgetsol(prog,B);
-echo off;
+SOL_W = sosgetsol(prog,W);
 
 % Synthesize Controller
 dBdx(v,p,a,t) = [diff(SOL_B,v); diff(SOL_B,p); diff(SOL_B,a)];
 dBdx = dBdx(v,p,a,t);
-u = (g.'*dBdx*W)/(dBdx.'*(g*g.')*dBdx);
+u = (g.'*dBdx*SOL_W)/(dBdx.'*(g*g.')*dBdx);
 
 % Use Controller
 for TT = T:2*step:end_time/2
@@ -176,8 +186,9 @@ for TT = T:2*step:end_time/2
     A = y_control(3);
     U = u(V,P,A,T);
     [t,y] = ode45(@(t,y) true_sys(y,U(1) + Th_no_u,U(2),L), tspan(find(tspan==TT):1:find(tspan==TT+2*step)), y_control);
-    t = [t(1);t(2)]; % remove TT+2*step data
-    y = [y(1);y(2)];
+    %t = [t(1);t(2)]; % remove TT+2*step data
+    %y = [y(1,:);y(2,:)];
+    disp(y);
     S_true_c = [S_true_c;t,y];
     y_control = y(end,:);
 end
@@ -188,8 +199,8 @@ for si1_ind = 1:len_si
         S_approx{si1_ind,si2_ind} = above_zero_alt(S_approx{si1_ind,si2_ind},'approximate');
     end
 end
-S_true_no   = above_zero_alt(S_true_no,  '       true');
-S_true_c   = above_zero_alt(S_true_c,  '       true');
+S_true_no   = above_zero_alt(S_true_no,  '       true_no');
+S_true_c   = above_zero_alt(S_true_c,  '       true_c');
 
 %% --- Plot --- %%
 figure
