@@ -186,10 +186,9 @@ for TT = T:2*step:end_time/2
     P = y_control(2);
     A = y_control(3);
     U = u(V,P,A,TT);
-    TT_nxt = TT+2*step;
-    [t,y] = ode45(@(t,y) true_sys(y,U(1) + Th_no_u,U(2),L), TT:step:TT_nxt, y_control);
-    t = [t(1);t(2)]; % remove TT+2*step data
-    y = [y(1,:);y(2,:)];
+    [t,y] = ode45(@(t,y) true_sys(y,U(1) + Th_no_u,U(2),L), tspan(find(tspan==TT):1:find(tspan==TT+2*step)), y_control);
+    %t = [t(1);t(2)]; % remove TT+2*step data
+    %y = [y(1,:);y(2,:)];
     disp(y);
     S_true_c = [S_true_c;t,y];
     y_control = y(end,:);
