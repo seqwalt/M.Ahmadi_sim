@@ -2,7 +2,7 @@
 % M. Ahmadi et al. titled "Safe Controller Synthesis for
 % Data-Driven Differential Inclusions"
 % Updated 7/08/20 by Sequoyah Walters
-
+tic
 %% --- Parameter Panel --- %%
 Th_max = 160000;     % max thrust (N)
 Th = 0.2*Th_max;      % Thrust
@@ -61,7 +61,6 @@ S_true_no = [S_true;t,y];
 T   = t_f + dur + wait;    % time to start controller
 [t,y] = ode45(@(t,y) true_sys(y,u1b + Th_no_u,u2b,L), tspan(find(tspan==t_f+dur):find(tspan==T)), y_end_data);
 S_true_c = [S_true;t,y];
-S_true_c = S_true_c(1:end-1,:);
 y_control = y(end,:);
 
 times = S_no_u(:,1);  % all times are the same for S_no_u, S_u1 and S_u2
@@ -104,9 +103,9 @@ p_t_N = S_true(S_true==t_N,3); % flight path angle @ time t_N
 a_t_N = S_true(S_true==t_N,4); % altitude @ time t_N
 
 % T defined above as t_f + t_dur + wait ... time to start controller
-v_T = S_true_c(S_true_c==T,2); % velocity @ time T
-p_T = S_true_c(S_true_c==T,3); % flight path angle @ time T
-a_T = S_true_c(S_true_c==T,4); % altitude @ time T
+v_T = y_control(1); % velocity @ time T
+p_T = y_control(2); % flight path angle @ time T
+a_T = y_co; % altitude @ time T
 
 syms v p a t c % vel, fpa, alt, time, and constant
 vars = [v; p; a; t];
@@ -182,7 +181,8 @@ u = (g.'*dBdx*SOL_W)/(dBdx.'*(g*g.')*dBdx);
 
 % Use Controller
 TT = T;
-for TT = T:2*step:end_time - step
+while y_control(3) > 0
+    TT_nxt = TT+2*step;
     V = y_control(1);
     P = y_control(2);
     A = y_control(3);
@@ -196,9 +196,7 @@ for TT = T:2*step:end_time - step
     elseif U2 > 20
         U2 = 20;
     end
-
-    TT_nxt = TT+2*step;
-    [t,y] = ode45(@(t,y) true_sys(y,Th_no_u,-1,L), T:step:TT_nxt, y_control);
+    [t,y] = ode45(@(t,y) true_sys(y,Th_no_u,-1,L), TT:step:TT_nxt, y_control);
     S_true_c = [S_true_c;t,y];
     S_true_c = S_true_c(1:end-1,:);
     y_control = y(end,:);
@@ -241,3 +239,4 @@ ylabel('Flight path angle (deg)')
 zlabel('Altitude (m)')
 legend('Unsafe set','True: No Control','True: Control','Approx System','Start','Failure','Approx Starts','Location','northwest')
 grid on
+toc
