@@ -26,8 +26,8 @@ t_f = 0.5;            % Time of system failure (s) (should be a multiple of step
 dur = 14.5;           % Duration of data measurement after failure (s) (multiple of step) use 14.5 for engine failure
 wait = 1; % wait 1 sec after approx is started to engage controller
 ex_dur = 100;         % Extrapolation time after data stops
-k = 3;                % Spline order
-ex_k = 3;             % Order of extrapolation
+k = 5;                % Spline order
+ex_k = 5;             % Order of extrapolation
 
 %% --- Aircraft Flight and Failure --- %%
 
@@ -97,21 +97,16 @@ synthesize_controller
 
 % Use Controller
 TT = T;
+U_hist = [];
 while y_control(3) > 0
     TT_nxt = TT+2*step;
     V = y_control(1);
     P = y_control(2);
     A = y_control(3);
-    U = double(u(V,P,A,TT)); % u(v,p,a,t) is created in synthesize controller
+    U = double(u(V,P,A,TT)); % u(v,p,a,t) is created in synthesize_controller
     U1 = U(1); U2 = U(2);
-    if U1 < 0
-        U1 = 0;
-    end
-    if U2 < -20
-        U2 = -20;
-    elseif U2 > 20
-        U2 = 20;
-    end
+
+    U_hist = [U_hist;U.'];
     [t,y] = ode45(@(t,y) true_sys(y,U1 + Th_no_u,U2,L), TT:step:TT_nxt, y_control);
     S_true_c = [S_true_c;t,y];
     S_true_c = S_true_c(1:end-1,:);
@@ -125,14 +120,14 @@ for si1_ind = 1:len_si
         S_approx{si1_ind,si2_ind} = above_zero_alt(S_approx{si1_ind,si2_ind},'approximate');
     end
 end
-S_true_no   = above_zero_alt(S_true_no,  '       true_no');
+S_true_no   = above_zero_alt(S_true_no,  '       true_no_c');
 S_true_c   = above_zero_alt(S_true_c,  '       true_c');
 
 %% --- Plot --- %%
 figure
 hold on
 axis tight
-fill([86,86,100,100],[-65,3.3,3.3,-65],[1 0.8 0.8])  % Make the unsafe region pink
+fill([86,86,110,110],[-65,3.3,3.3,-65],[1 0.8 0.8])  % Make the unsafe region pink
 plot3(S_true_no(:,2),S_true_no(:,3),S_true_no(:,4),'k')
 plot3(S_true_c(:,2),S_true_c(:,3),S_true_c(:,4),'b')
 
