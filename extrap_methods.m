@@ -1,4 +1,6 @@
-%% Trajectory stuff
+% This file is meant to test the 1-trajectory approach from
+% Ahmadi_sim.pdf write-up.
+
 x= 2;
 T_max = 160000;     % max thrust (N)
 T = 0.2*T_max;      % Thrust
