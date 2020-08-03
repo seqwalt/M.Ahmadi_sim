@@ -1,5 +1,5 @@
 function [f,g] = F_and_G(aprx_strt_t,ex_times,k,coefs)
-aprx_strt_t = t_f + dur; coefs = system_coefs;
+
 % Here are the coefficients
 V_C_coefs = coefs{1,1};
 V_u_coefs = coefs{1,2};

@@ -1,7 +1,7 @@
 m = 60000;   % mass is 60,000 kg
 grav = 9.8;  % accel due to grav is 9.8 ms^(-2)
 v_safe = 86;
-M = 10;
+M = 0;
 
 t_N   = t_f;                   % time t_N
 v_t_N = S_true(S_true==t_N,2); % velocity @ time t_N
