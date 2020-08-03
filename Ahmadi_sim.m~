@@ -91,8 +91,95 @@ end
 
 %% --- Controller Synthesis and Usage --- %%
 
-% Sythesize the controller "u" using MATLAB file synthesize_controller
-synthesize_controller
+m = 60000;  % mass is 60,000 kg
+grav = 9.8;    % accel due to grav is 9.8 ms^(-2)
+v_safe = 86;
+M = 10;
+PI = 3.14159;
+
+t_N   = t_f;                   % time t_N
+v_t_N = S_true(S_true==t_N,2); % velocity @ time t_N
+p_t_N = S_true(S_true==t_N,3); % flight path angle @ time t_N
+a_t_N = S_true(S_true==t_N,4); % altitude @ time t_N
+
+% T defined above as t_f + t_dur + wait ... time to start controller
+v_T = y_control(1); % velocity @ time T
+p_T = y_control(2); % flight path angle @ time T
+a_T = y_control(3); % altitude @ time T
+
+syms v p a t c % vel, fpa, alt, time, and constant
+vars = [v; p; a; t];
+% Constructing the vector field dx/dt = f + g*u
+
+f = [(-7.5125*v^2/m) - (m*grav*p*PI/180);
+     (85.75*v/m) - (grav/v);
+     (v*p*PI/180)];
+
+g = [1/m , -32.34*v^2/m;
+     0   , (PI*Th/(180*m*v)) + (288.12*v/m);
+     0   , 0];
+
+% =============================================
+% First, initialize the sum of squares program
+prog = sosprogram(vars);
+% =============================================
+% Declare variables and functions
+[prog,B(v,p,a,t)]  = sospolyvar(prog,monomials(vars,0:4),'wscoeff');
+[prog,W(v,p,a,t)]  = sospolyvar(prog,monomials(vars,0:4),'wscoeff');
+[prog,m1(v,p,a,t)] = sospolyvar(prog,monomials(vars,0:2),'wscoeff');
+[prog,m2(v,p,a,t)] = sospolyvar(prog,monomials(vars,0:2),'wscoeff');
+[prog,s(v,p,a,t)]  = sospolyvar(prog,monomials(vars,0:2),'wscoeff');
+[prog,q2(v,p,a,t)] = sospolyvar(prog,monomials(vars,0:2),'wscoeff');
+prog = sosdecvar(prog,c);
+% =============================================
+% Next, define SOSP constraints
+prog = sosineq(prog,W(v,p,a,t));
+prog = sosineq(prog,m1(v,p,a,t));
+prog = sosineq(prog,m2(v,p,a,t));
+prog = sosineq(prog,q2(v,p,a,t));
+prog = sosineq(prog,s(v,p,a,t));
+prog = sosineq(prog,c);
+
+q1(v,p,a,t) = v^2 + p^2 + a^2 +t^2;
+
+expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v,p,a,t)*(v_safe-v) - c;
+expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*(f(2)-M) + diff(B(v,p,a,t),a)*(f(3)-M) + W(v,p,a,t) + m1(v,p,a,t)*(t-t_N)*(t-T))*v;
+expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2(v,p,a,t)*(t-t_N)*(t-T))*v;
+prog = sosineq(prog,expr1);
+prog = sosineq(prog,expr2);
+prog = sosineq(prog,expr3);
+
+% Perform Alternation
+
+expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2(v,p,a,t);
+expr4_1 = expr4(1);
+expr4_2 = expr4(2)*v;
+prog = sosineq(prog,expr4_1);
+prog = sosineq(prog,expr4_2);
+
+% Constrain outputs --> 0 <= Th <= 15;  -3 <= fpa <= 15
+% dBdx(v,p,a,t) = [diff(B(v,p,a,t),v); diff(B(v,p,a,t),p); diff(B(v,p,a,t),a)];
+% u = (g.'*dBdx(v,p,a,t)*W(v,p,a,t))/(dBdx(v,p,a,t).'*(g*g.')*dBdx(v,p,a,t));
+% 
+% prog = sosineq(prog,u(1));
+% prog = sosineq(prog,Th_max - u(1));
+% prog = sosineq(prog,u(2) + 3);
+% prog = sosineq(prog,15 - u(2));
+% =============================================
+% And call solver
+solver_opt.solver = 'sedumi';
+echo on;
+prog = sossolve(prog,solver_opt);
+echo off;
+% =============================================
+% Finally, get solution
+SOL_B = sosgetsol(prog,B);
+SOL_W = sosgetsol(prog,W);
+
+% Synthesize Controller
+dBdx(v,p,a,t) = [diff(SOL_B,v); diff(SOL_B,p); diff(SOL_B,a)];
+dBdx = dBdx(v,p,a,t);
+u = (g.'*dBdx*SOL_W)/(dBdx.'*(g*g.')*dBdx);
 
 % Use Controller
 TT = T;
@@ -101,7 +188,7 @@ while y_control(3) > 0
     V = y_control(1);
     P = y_control(2);
     A = y_control(3);
-    U = double(u(V,P,A,TT)); % u(v,p,a,t) is created in synthesize controller
+    U = double(u(V,P,A,TT));
     U1 = U(1); U2 = U(2);
     if U1 < 0
         U1 = 0;
