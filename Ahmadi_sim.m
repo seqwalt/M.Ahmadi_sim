@@ -64,7 +64,7 @@ S_true_c = [S_true;t,y];
 y_control = y(end,:);
 
 times = S_no_u(:,1);  % all times are the same for S_no_u, S_u1 and S_u2
-ex_times = times(1):step:times(end) + ex_dur; % Time span plus extrap time 
+ex_times = times(1):step:times(end) + dur; % Time span plus extrap time 
 
 %% --- Approximate System Model --- %%
 
@@ -78,6 +78,7 @@ ex_times = times(1):step:times(end) + ex_dur; % Time span plus extrap time
 [A_C_coefs,A_u_coefs] = spline_coefs('alt',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'alt' for altitude
 
 system_coefs = {V_C_coefs,V_u_coefs; P_C_coefs,P_u_coefs; A_C_coefs,A_u_coefs};
+[f,g] = F_and_G(t_f+dur, ex_times, k, system_coefs);
 
 % SYSTEM MODEL
 eval_times = (times(end)+step:step:times(end)+step+ex_dur)';
