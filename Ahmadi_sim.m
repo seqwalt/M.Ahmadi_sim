@@ -69,13 +69,13 @@ ex_times = times(1):step:times(end) + ex_dur; % Time span plus extrap time
 %% --- Approximate System Model --- %%
 
 % Coefficients for Velocity
-[V_C_coefs,V_u_coefs] = spline_coefs('v',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'v' for velocity
+[V_C_coefs,V_u_coefs] = spline_coefs('vel',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'vel' for velocity
 
 % Coefficients for Flight Path Angle
-[P_C_coefs,P_u_coefs] = spline_coefs('f',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'f' for FPA
+[P_C_coefs,P_u_coefs] = spline_coefs('fpa',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'fpa' for FPA
 
 % Coefficients for Altitude
-[A_C_coefs,A_u_coefs] = spline_coefs('a',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'a' for altitude
+[A_C_coefs,A_u_coefs] = spline_coefs('alt',times,ex_times,k,ex_k,S_no_u,S_a,S_true_pre,u1a,u2a,u1b,u2b); % 'alt' for altitude
 
 system_coefs = {V_C_coefs,V_u_coefs; P_C_coefs,P_u_coefs; A_C_coefs,A_u_coefs};
 
@@ -155,3 +155,4 @@ zlabel('Altitude (m)')
 legend('Unsafe set','True: No Control','True: Control','Approx System','Start','Failure','Approx Starts','Location','northwest')
 grid on
 toc
+system('say simulation complete')

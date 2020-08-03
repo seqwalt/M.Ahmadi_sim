@@ -56,13 +56,12 @@ prog1 = sosineq(prog1,expr3);
 % Constrain outputs --> 0 <= Th <= 15;  -3 <= fpa <= 15
 % dBdx(v,p,a,t) = [diff(B(v,p,a,t),v); diff(B(v,p,a,t),p); diff(B(v,p,a,t),a)];
 % u = (g.'*dBdx(v,p,a,t)*W(v,p,a,t))/(dBdx(v,p,a,t).'*(g*g.')*dBdx(v,p,a,t));
-% 
 % prog = sosineq(prog,u(1));
 % prog = sosineq(prog,Th_max - u(1));
 % prog = sosineq(prog,u(2) + 3);
 % prog =  sosineq(prog,15 - u(2));
 
-% Solve B and q2
+% Solve for B and q2
 solver_opt.solver = 'sedumi';
 prog1 = sossolve(prog1,solver_opt);
 B = sosgetsol(prog1,B);
@@ -75,15 +74,15 @@ prog2 = sosprogram(vars);
 % Declare variables and functions
 [prog2,q1(v,p,a,t)] = sospolyvar(prog2,monomials(vars,0:2),'wscoeff');
 % Define SOSP constraints
-expr4 = -q1(v,p,a,t)*([diff(B,v), diff(B,p), diff(B,a)]*g) - q2;
+expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2(v,p,a,t);
 expr4_1 = expr4(1);
 expr4_2 = expr4(2)*v;  % need to multiply by v so there is no v in the denominator of SOSP
 prog2 = sosineq(prog2,expr4_1);
 prog2 = sosineq(prog2,expr4_2);
 % Solve for q1
 solver_opt.solver = 'sedumi';
-prog1 = sossolve(prog1,solver_opt);
-q1 = sosgetsol(prog1,q1);
+prog2 = sossolve(prog2,solver_opt);
+q1 = sosgetsol(prog2,q1);
 
 %% 3) Use the previously found q1 to find a better B
 
@@ -108,7 +107,7 @@ prog_fin = sosineq(prog_fin,c);
 expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v,p,a,t)*(v_safe-v) - c;
 expr2 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)-M) + diff(B(v,p,a,t),p)*(f(2)-M) + diff(B(v,p,a,t),a)*(f(3)-M) + W(v,p,a,t) + m1(v,p,a,t)*(t-t_N)*(t-T))*v; % need to multiply by v so there is no v in the denominator of SOSP
 expr3 = -(diff(B(v,p,a,t),t) + diff(B(v,p,a,t),v)*(f(1)+M) + diff(B(v,p,a,t),p)*(f(2)+M) + diff(B(v,p,a,t),a)*(f(3)+M) + W(v,p,a,t) + m2(v,p,a,t)*(t-t_N)*(t-T))*v; % need to multiply by v so there is no v in the denominator of SOSP
-expr4 = -q1*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2(v,p,a,t);
+expr4 = -q1(v,p,a,t)*([diff(B(v,p,a,t),v), diff(B(v,p,a,t),p), diff(B(v,p,a,t),a)]*g) - q2(v,p,a,t);
 expr4_1 = expr4(1);
 expr4_2 = expr4(2)*v;  % need to multiply by v so there is no v in the denominator of SOSP
 
@@ -121,7 +120,6 @@ prog_fin = sosineq(prog_fin,expr4_2);
 % Constrain outputs --> 0 <= Th <= 15;  -3 <= fpa <= 15
 % dBdx(v,p,a,t) = [diff(B(v,p,a,t),v); diff(B(v,p,a,t),p); diff(B(v,p,a,t),a)];
 % u = (g.'*dBdx(v,p,a,t)*W(v,p,a,t))/(dBdx(v,p,a,t).'*(g*g.')*dBdx(v,p,a,t));
-% 
 % prog = sosineq(prog,u(1));
 % prog = sosineq(prog,Th_max - u(1));
 % prog = sosineq(prog,u(2) + 3);

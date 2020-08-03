@@ -4,11 +4,11 @@
 
 function [C_coefs, u_coefs] = spline_coefs(output_type,times,ex_times,order,ex_order,S_no_u,S_a,S_b,u1a,u2a,u1b,u2b)
 
-if strcmpi(output_type(1),'v') == 1
+if strcmpi(output_type(1),'vel') == 1
     column = 2;
-elseif strcmpi(output_type(1),'f') == 1
+elseif strcmpi(output_type(1),'fpa') == 1
     column = 3;
-elseif strcmpi(output_type(1),'a') == 1
+elseif strcmpi(output_type(1),'alt') == 1
     column = 4;
 end
 
@@ -26,7 +26,7 @@ exS_a = spapi(order,ex_times,exS_a_vals);                 % now in B-form
 
 A = exS_a.coefs;
 
-%% --- Extrapolate for 3rd trajectory coefficients (B) --- %%
+%% --- Extrapolate for 3rd (final) trajectory coefficients (B) --- %%
 exS_b = fnxtr(spapi(order,times,S_b(:,column)),ex_order); % exS_b is in ppform
 exS_b_vals = fnval(exS_b,ex_times);
 exS_b = spapi(order,ex_times,exS_b_vals);                 % now in B-form
