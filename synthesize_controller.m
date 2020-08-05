@@ -1,7 +1,7 @@
 m = 60000;   % mass is 60,000 kg
 grav = 9.8;  % accel due to grav is 9.8 ms^(-2)
 v_safe = 86;
-M = 0;
+M = 1;
 
 t_N   = t_f;                   % time t_N
 v_t_N = S_true(S_true==t_N,2); % velocity @ time t_N
@@ -37,7 +37,7 @@ prog1 = sosineq(prog1,q2(v,p,a,t));
 prog1 = sosineq(prog1,s(v,p,a,t));
 prog1 = sosineq(prog1,c);
 
-expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v,p,a,t)*(v_safe-v) - c;
+expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v_T,p_T,a_T,T)*(v_safe-v_T) - c;
 expr2 = -(diff(B(v,p,a,t),t) + dBdx(v,p,a,t).'*(f(t) - M) + W(v,p,a,t) + m1(v,p,a,t)*(t-t_N)*(t-T));
 expr3 = -(diff(B(v,p,a,t),t) + dBdx(v,p,a,t).'*(f(t) + M) + W(v,p,a,t) + m2(v,p,a,t)*(t-t_N)*(t-T));
 prog1 = sosineq(prog1,expr1);
@@ -95,7 +95,7 @@ prog_fin = sosineq(prog_fin,q2(v,p,a,t));
 prog_fin = sosineq(prog_fin,s(v,p,a,t));
 prog_fin = sosineq(prog_fin,c);
 
-expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v,p,a,t)*(v_safe-v) - c;
+expr1 = B(v_T,p_T,a_T,T) - B(v_t_N,p_t_N,a_t_N,t_N) + s(v_T,p_T,a_T,T)*(v_safe-v_T) - c;
 expr2 = -(diff(B(v,p,a,t),t) + dBdx(v,p,a,t).'*(f(t) - M) + W(v,p,a,t) + m1(v,p,a,t)*(t-t_N)*(t-T));
 expr3 = -(diff(B(v,p,a,t),t) + dBdx(v,p,a,t).'*(f(t) + M) + W(v,p,a,t) + m2(v,p,a,t)*(t-t_N)*(t-T));
 expr4 = -q1(v,p,a,t)*(dBdx(v,p,a,t).'*g(t)) - q2(v,p,a,t);

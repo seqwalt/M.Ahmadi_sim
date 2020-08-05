@@ -1,7 +1,7 @@
 % Ahmadi_sim.m replicates the results presented in a paper by
 % M. Ahmadi et al. titled "Safe Controller Synthesis for
 % Data-Driven Differential Inclusions"
-% Updated 7/08/20 by Sequoyah Walters
+% Updated 8/04/20 by Sequoyah Walters
 tic
 %% --- Parameter Panel --- %%
 Th_max = 160000;     % max thrust (N)
@@ -151,4 +151,4 @@ zlabel('Altitude (m)')
 legend('Unsafe set','True: No Control','True: Control','Approx System','Start','Failure','Approx Starts','Location','northwest')
 grid on
 toc
-system('say simulation complete')
+system('say -v Zarvox simulation complete')
