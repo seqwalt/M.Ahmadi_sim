@@ -2,6 +2,7 @@
 % M. Ahmadi et al. titled "Safe Controller Synthesis for
 % Data-Driven Differential Inclusions"
 % Updated 8/04/20 by Sequoyah Walters
+system('say simulation initiated');
 tic
 %% --- Parameter Panel --- %%
 Th_max = 160000;     % max thrust (N)
@@ -105,7 +106,7 @@ while y_control(3) > 0
     A = y_control(3);
     U = double(u(V,P,A,TT)); % u(v,p,a,t) is created in synthesize_controller
     U1 = U(1); U2 = U(2);
-
+    
     U_hist = [U_hist;U.'];
     [t,y] = ode45(@(t,y) true_sys(y,U1 + Th_no_u,U2,L), TT:step:TT_nxt, y_control);
     S_true_c = [S_true_c;t,y];
@@ -151,4 +152,5 @@ zlabel('Altitude (m)')
 legend('Unsafe set','True: No Control','True: Control','Approx System','Start','Failure','Approx Starts','Location','northwest')
 grid on
 toc
-system('say -v Zarvox simulation complete')
+%system('say -v Zarvox simulation complete');
+system('say simulation complete');

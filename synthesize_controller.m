@@ -44,12 +44,15 @@ prog1 = sosineq(prog1,expr1);
 prog1 = sosineq(prog1,expr2);
 prog1 = sosineq(prog1,expr3);
 
-% Constrain outputs --> 0 <= Th <= 15;  -3 <= fpa <= 15
-% u = (g(t).'*dBdx(v,p,a,t)*W(v,p,a,t))/(dBdx(v,p,a,t).'*(g(t)*g(t).')*dBdx(v,p,a,t));
-% prog1 = sosineq(prog1,u(1));
-% prog1 = sosineq(prog1,Th_max - u(1));
-% prog1 = sosineq(prog1,u(2) + 3);
-% prog1 =  sosineq(prog1,15 - u(2));
+% Constrain outputs --> 0 <= Th <= Th_max;  -3 <= fpa <= 15
+u_num = (g(t).'*dBdx(v,p,a,t));
+%u_num = (g(t).'*dBdx(v,p,a,t))*W(v,p,a,t);
+u_num1 = u_num(1);
+u_num2 = u_num(2);
+u_den = dBdx(v,p,a,t).'*(g(t)*g(t).')*dBdx(v,p,a,t);
+prog1 = sosineq(prog1,u_num1);
+% prog1 = sosineq(prog1,u_num2 + 3*u_den);
+% prog1 =  sosineq(prog1,15*u_den - u_num2);
 
 % Solve for B and q2
 solver_opt.solver = 'sedumi';
@@ -109,11 +112,13 @@ prog_fin = sosineq(prog_fin,expr4_1);
 prog_fin = sosineq(prog_fin,expr4_2);
 
 % Constrain outputs --> 0 <= Th <= 15;  -3 <= fpa <= 15
-% u = (g(t).'*dBdx(v,p,a,t)*W(v,p,a,t))/(dBdx(v,p,a,t).'*(g(t)*g(t).')*dBdx(v,p,a,t));
-% prog_fin = sosineq(prog_fin,u(1));
-% prog_fin = sosineq(prog_fin,Th_max - u(1));
-% prog_fin = sosineq(prog_fin,u(2) + 3);
-% prog_fin =  sosineq(prog_fin,15 - u(2));
+u_num = (g(t).'*dBdx(v,p,a,t)); % *W(v,p,a,t);
+u_num1 = u_num(1);
+% u_num2 = u_num(2);
+% u_den = dBdx(v,p,a,t).'*(g(t)*g(t).')*dBdx(v,p,a,t);
+prog_fin = sosineq(prog_fin,u_num1);
+% prog_fin = sosineq(prog_fin,u_num2 + 3*u_den);
+% prog_fin =  sosineq(prog_fin,15*u_den - u_num2);
 
 % Solve for B and W
 solver_opt.solver = 'sedumi';
